@@ -89,6 +89,7 @@ public enum TeslaError: Error {
 	case authenticationFailed
 	case invalidOptionsForCommand
 	case failedToParseData
+	case streamingMissingEmailOrVehicleToken
 }
 
 let ErrorInfo = "ErrorInfo"
@@ -168,6 +169,8 @@ extension TeslaSwift {
 	This method is useful if your app wants to ask the user for credentials once and reuse the token skiping authentication
 	If the token is invalid a new authentication will be required
 	
+	- parameter token:      The previous token
+	- parameter email:      Email is required for streaming
 	*/
 	public func reuse(token: AuthToken, email: String? = nil) {
 		self.token = token
@@ -505,6 +508,8 @@ extension TeslaSwift {
 			
 			_ = reloadVehicle(vehicle: vehicle).then { (freshVehicle) -> Void in
 				self.startStream(vehicle: freshVehicle, dataReceived: dataReceived)
+			}.catch { (error) in
+				dataReceived((event: nil, error: error))
 			}
 			
 		} else {
@@ -526,7 +531,10 @@ extension TeslaSwift {
 	
 	func startStream(vehicle: Vehicle, dataReceived: @escaping (StreamEvent?, Error?) -> Void) {
 		guard let email = email,
-			let vehicleToken = vehicle.tokens?.first else { return }
+			let vehicleToken = vehicle.tokens?.first else {
+				dataReceived(nil, TeslaError.streamingMissingEmailOrVehicleToken)
+				return
+		}
 		
 		let endpoint = StreamEndpoint.stream(email: email, vehicleToken: vehicleToken, vehicleId: "\(vehicle.vehicleID!)")
 		

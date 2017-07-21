@@ -20,7 +20,7 @@ class TeslaStreaming {
 	func openStream(endpoint: StreamEndpoint, dataReceived: @escaping (StreamEvent?, Error?) -> Void) {
 		
 		let authentication = endpoint.authentication
-		let url = endpoint.baseURL(false) + endpoint.path
+		let url = endpoint.baseURL() + endpoint.path
 		
 		logDebug("Opening Stream to: \(url)", debuggingEnabled: debuggingEnabled)
 		
@@ -52,7 +52,7 @@ class TeslaStreaming {
 		httpStreaming.connect(url: URL(string: url)!, username: authentication.email, password: authentication.vehicleToken)
 	}
 	
-	public func closeStream() {
+	func closeStream() {
 		httpStreaming.disconnect()
 		logDebug("Stream closed", debuggingEnabled: self.debuggingEnabled)
 	}
