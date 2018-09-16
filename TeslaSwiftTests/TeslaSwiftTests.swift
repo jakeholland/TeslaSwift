@@ -263,6 +263,7 @@ class TeslaSwiftTests: XCTestCase {
 				
 				XCTAssertEqual(response.chargingState, .Complete)
 				XCTAssertEqual(response.ratedBatteryRange?.miles, 200.0)
+				XCTAssertEqual(response.batteryHeaterOn, true)
 				
 				expection.fulfill()
 			}.catch { (error) in
@@ -386,7 +387,7 @@ class TeslaSwiftTests: XCTestCase {
 				service.getVehicleState(vehicles[0])
 			}.then { (response) -> Void in
 			
-				XCTAssertEqual(response.darkRims, true)
+				XCTAssertEqual(response.locked, true)
 				
 				expection.fulfill()
 			}.catch { (error) in

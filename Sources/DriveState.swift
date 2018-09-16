@@ -7,10 +7,9 @@
 //
 
 import Foundation
-import ObjectMapper
 import CoreLocation
 
-open class DriveState: Mappable {
+open class DriveState: Codable {
 	
 	open var shiftState: String?
 	
@@ -18,8 +17,15 @@ open class DriveState: Mappable {
 	open var latitude: CLLocationDegrees?
 	open var longitude: CLLocationDegrees?
 	open var heading: CLLocationDirection?
+	open var nativeLatitude: CLLocationDegrees?
+	open var nativeLongitude: CLLocationDegrees?
+	private var nativeLocationSupportedBool: Int?
+	open var nativeLocationSupported: Bool { return nativeLocationSupportedBool == 1 }
+	open var nativeType: String?
+	
 	open var date: Date?
-	open var timeStamp: Date?
+	open var timeStamp: TimeInterval?
+	open var power: Int?
 	
 	
 	open var position: CLLocation? {
@@ -38,18 +44,19 @@ open class DriveState: Mappable {
 		return nil
 	}
 	
-	required public init?(map: Map) {
-		
-	}
-	
-	open func mapping(map: Map) {
-		shiftState	<- map["shift_state"]
-		speed		<- map["speed"]
-		latitude	<- map["latitude"]
-		longitude	<- map["longitude"]
-		heading		<- map["heading"]
-		date		<- (map["gps_as_of"], DateTransform())
-		timeStamp	<- (map["timestamp"], TeslaTimeStampTransform())
+	enum CodingKeys: String, CodingKey {
+		case shiftState	 = "shift_state"
+		case speed		 = "speed"
+		case latitude	 = "latitude"
+		case longitude	 = "longitude"
+		case power
+		case heading	= "heading"
+		case date		= "gps_as_of"
+		case timeStamp	= "timestamp"
+		case nativeLatitude = "native_latitude"
+		case nativeLongitude = "native_longitude"
+		case nativeLocationSupportedBool = "native_location_supported"
+		case nativeType = "native_type"
 	}
 
 	

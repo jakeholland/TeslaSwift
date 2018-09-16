@@ -7,22 +7,42 @@
 //
 
 import Foundation
-import ObjectMapper
 
-open class ClimateState: Mappable {
+open class ClimateState: Codable {
 	
-	public struct Temperature {
-		fileprivate var value: Double
+	open var batteryHeater: Bool?
+	
+	open var batteryHeaterNoPower: Bool?
+	
+	public struct Temperature: Codable {
+		fileprivate var value: Measurement<UnitTemperature>
 		
 		public init(celsius: Double?) {
-			value = celsius ?? 0.0
+			let tempValue = celsius ?? 0.0
+			value = Measurement<UnitTemperature>(value: tempValue, unit: .celsius)
 		}
 		public init(fahrenheit: Double) {
-			value = (fahrenheit - 32.0) / 1.8
+			value = Measurement<UnitTemperature>(value: fahrenheit, unit: .fahrenheit)
 		}
 		
-		public var celsius: Double { return value }
-		public var fahrenheit: Double { return (value * 1.8) + 32.0 }
+		public init(from decoder: Decoder) throws {
+			let container = try decoder.singleValueContainer()
+			if let tempValue = try container.decode(Double?.self) {
+				value = Measurement<UnitTemperature>(value: tempValue, unit: .celsius)
+			} else {
+				value = Measurement<UnitTemperature>(value: 0, unit: .celsius)
+			}
+		}
+		
+		public func encode(to encoder: Encoder) throws {
+			
+			var container = encoder.singleValueContainer()
+			try container.encode(value.converted(to: .celsius).value)
+			
+		}
+		
+		public var celsius: Double { return value.converted(to: .celsius).value }
+		public var fahrenheit: Double { return value.converted(to: .fahrenheit).value }
 	}
 	
 	open var driverTemperatureSetting: Temperature?
@@ -37,6 +57,8 @@ open class ClimateState: Mappable {
 	open var isClimateOn: Bool?
 	open var isFrontDefrosterOn: Bool?
 	open var isRearDefrosterOn: Bool?
+	
+	open var isPreconditioning: Bool?
 	
 	open var leftTemperatureDirection: Int?
 	
@@ -53,67 +75,66 @@ open class ClimateState: Mappable {
 	open var rightTemperatureDirection: Int?
 	
 	
-    open var seatHeaterLeft: Int?
-	open var seatHeaterRearCenter: Int?
-	open var seatHeaterRearLeft: Int?
+    open var seatHeaterLeft: Bool?
+	open var seatHeaterRearCenter: Bool?
+	open var seatHeaterRearLeft: Bool?
 	open var seatHeaterRearLeftBack: Int?
-	open var seatHeaterRearRight: Int?
+	open var seatHeaterRearRight: Bool?
 	open var seatHeaterRearRightBack: Int?
-	open var seatHeaterRight: Int?
+	open var seatHeaterRight: Bool?
 	
-	open var smartPreconditioning: Int?
+	open var sideMirrorHeaters: Bool?
+	open var steeringWheelHeater: Bool?
+	open var wiperBladeHeater: Bool?
 	
-	open var timeStamp: Date?
+	open var smartPreconditioning: Bool?
 	
-	public required init?(map: Map) { }
+	open var timeStamp: TimeInterval?
 	
-	open func mapping(map: Map) {
+	enum CodingKeys: String, CodingKey {
 		
-		let temperatureTransform = TransformOf<Temperature, Double>(
-			fromJSON: {
-				if let temp = $0 {
-					return Temperature(celsius: temp)
-				} else {
-					return nil
-				}
-			},
-			toJSON: {$0?.celsius}
-		)
+		case batteryHeater   = "battery_heater"
+		case batteryHeaterNoPower = "battery_heater_no_power"
 		
-		driverTemperatureSetting	<- (map["driver_temp_setting"], temperatureTransform)
-		fanStatus					<- map["fan_status"]
+		case driverTemperatureSetting	= "driver_temp_setting"
+		case fanStatus					 = "fan_status"
 		
-		insideTemperature			<- (map["inside_temp"], temperatureTransform)
+		case insideTemperature			= "inside_temp"
 		
-		isAutoConditioningOn		<- map["is_auto_conditioning_on"]
-		isClimateOn                 <- map["is_climate_on"]
-		isFrontDefrosterOn			<- map["is_front_defroster_on"]
-		isRearDefrosterOn			<- map["is_rear_defroster_on"]
+		case isAutoConditioningOn		 = "is_auto_conditioning_on"
+		case isClimateOn	             = "is_climate_on"
+		case isFrontDefrosterOn			 = "is_front_defroster_on"
+		case isRearDefrosterOn			 = "is_rear_defroster_on"
 		
-		leftTemperatureDirection	<- map["left_temp_direction"]
+		case isPreconditioning		= "is_preconditioning"
 		
-		maxAvailableTemperature     <- (map["max_avail_temp"], temperatureTransform)
-		minAvailableTemperature     <- (map["min_avail_temp"], temperatureTransform)
+		case leftTemperatureDirection	 = "left_temp_direction"
 		
-		outsideTemperature			<- (map["outside_temp"], temperatureTransform)
+		case maxAvailableTemperature     = "max_avail_temp"
+		case minAvailableTemperature     = "min_avail_temp"
 		
-		passengerTemperatureSetting <- (map["passenger_temp_setting"], temperatureTransform)
+		case outsideTemperature			= "outside_temp"
 		
-		rightTemperatureDirection	<- map["right_temp_direction"]
+		case passengerTemperatureSetting = "passenger_temp_setting"
+		
+		case rightTemperatureDirection	 = "right_temp_direction"
 		
 		
-        seatHeaterLeft				<- map["seat_heater_left"]
-		seatHeaterRearCenter		<- map["seat_heater_rear_center"]
-		seatHeaterRearLeft			<- map["seat_heater_rear_left"]
-		seatHeaterRearLeftBack		<- map["seat_heater_rear_left_back"]
-		seatHeaterRearRight			<- map["seat_heater_rear_right"]
-		seatHeaterRearRightBack		<- map["seat_heater_rear_right_back"]
-		seatHeaterRight				<- map["seat_heater_right"]
+        case seatHeaterLeft				 = "seat_heater_left"
+		case seatHeaterRearCenter		 = "seat_heater_rear_center"
+		case seatHeaterRearLeft			 = "seat_heater_rear_left"
+		case seatHeaterRearLeftBack		 = "seat_heater_rear_left_back"
+		case seatHeaterRearRight			 = "seat_heater_rear_right"
+		case seatHeaterRearRightBack		 = "seat_heater_rear_right_back"
+		case seatHeaterRight				 = "seat_heater_right"
 		
+		case sideMirrorHeaters				= "side_mirror_heaters"
+		case steeringWheelHeater			= "steering_wheel_heater"
+		case wiperBladeHeater				= "wiper_blade_heater"
 		
-        smartPreconditioning		<- map["smart_preconditioning"]
+        case smartPreconditioning		 = "smart_preconditioning"
 		
-		timeStamp					<- (map["timestamp"], TeslaTimeStampTransform())
+		case timeStamp					= "timestamp"
         
 	}
 }
