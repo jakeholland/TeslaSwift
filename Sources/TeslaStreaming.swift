@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Starscream
 
 /*
  * Streaming class takes care of the different types of data streaming from Tesla servers
@@ -14,46 +15,50 @@ import Foundation
  */
 class TeslaStreaming {
 	
+    private var socket: WebSocket?
 	var debuggingEnabled = false
-	var httpStreaming = HTTPEventStreaming()
 	
 	func openStream(endpoint: StreamEndpoint, dataReceived: @escaping ((event: StreamEvent?, error: Error?)) -> Void) {
-		
-		let authentication = endpoint.authentication
-		let url = endpoint.baseURL() + endpoint.path
-		
-		logDebug("Opening Stream to: \(url)", debuggingEnabled: debuggingEnabled)
-		
-		httpStreaming.openCallback = {
-			logDebug("Stream open", debuggingEnabled: self.debuggingEnabled)
-		}
-		
-		httpStreaming.callback = {
-			data in
-			logDebug("Stream data: \(data)", debuggingEnabled: self.debuggingEnabled)
-			
-			let event = StreamEvent(values: data)
-			
-			DispatchQueue.main.async {
-				dataReceived((event, nil))
-			}
-		}
-		
-		httpStreaming.errorCallback = {
-			(error: Error?) in
-			
-			logDebug("Stream error: \(String(describing: error))", debuggingEnabled: self.debuggingEnabled)
-			
-			DispatchQueue.main.async {
-				dataReceived((nil, error))
-			}
-		}
-		
-		httpStreaming.connect(url: URL(string: url)!, username: authentication.email, password: authentication.vehicleToken)
+        let url = endpoint.url
+        let socket = WebSocket(url: url)
+        socket.enabledSSLCipherSuites = [TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384]
+        self.socket = socket
+        
+        socket.onConnect = {
+            logDebug("Stream open", debuggingEnabled: self.debuggingEnabled)
+            socket.write(string: endpoint.subscribe)
+        }
+
+        socket.onDisconnect = { (error: Error?) in
+            logDebug("Stream disconnected: \(error)", debuggingEnabled: self.debuggingEnabled)
+        }
+
+        socket.onText = { (text: String) in
+            logDebug("Stream string: \(text)", debuggingEnabled: self.debuggingEnabled)
+            
+            let event = StreamEvent(values: text)
+            DispatchQueue.main.async {
+                dataReceived((event, nil))
+            }
+        }
+
+        socket.onData = { (data: Data) in
+            guard let string = try? JSONSerialization.jsonObject(with: data, options: .allowFragments) else { return }
+            
+            logDebug("Stream data: \(string)", debuggingEnabled: self.debuggingEnabled)
+            
+//            let event = StreamEvent(values: data)
+//            DispatchQueue.main.async {
+//                dataReceived((event, nil))
+//            }
+        }
+        
+        logDebug("Opening Stream to: \(url)", debuggingEnabled: debuggingEnabled)
+        socket.connect()
 	}
 	
 	func closeStream() {
-		httpStreaming.disconnect()
+        socket?.disconnect()
 		logDebug("Stream closed", debuggingEnabled: self.debuggingEnabled)
 	}
 

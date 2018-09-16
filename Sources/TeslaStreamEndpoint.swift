@@ -15,20 +15,39 @@ enum StreamEndpoint {
 
 extension StreamEndpoint {
 	
-	var authentication: (email: String, vehicleToken: String) {
+	var subscribe: String {
 		switch self {
-		case let .stream(email, vehicleToken, _):
-			return (email: email, vehicleToken: vehicleToken)
+		case let .stream(email, vehicleToken, vehicleId):
+            return StreamSubscribe(email: email, vehicleToken: vehicleToken, vehicleId: vehicleId).jsonString!
 		}
 	}
+    
+    var baseUrl: String { return "wss://streaming.vn.teslamotors.com/" }
+    
 	var path: String {
 		switch self {
-		case let .stream(_, _, vehicleId):
-			return "/stream/\(vehicleId)/?values=speed,odometer,soc,elevation,est_heading,est_lat,est_lng,power,shift_state,range,est_range,heading"
+		case let .stream(_, _, _):
+			return "streaming/"
 		}
 	}
-	
-	func baseURL() -> String {
-		return "https://streaming.vn.teslamotors.com"
-	}
+    
+    var url: URL { return URL(string: "\(baseUrl)\(path)")!  }
+}
+
+struct StreamSubscribe: Codable {
+    
+    let msg_type: String = "data:subscribe"
+    let tag: String
+    let token: String
+    let value: String = "speed,odometer,soc,elevation,est_heading,est_lat,est_lng,est_corrected_lat,est_corrected_lng,native_latitude,native_longitude,native_heading,native_type,native_location_supported,power,shift_state"
+    
+    init(email: String, vehicleToken: String, vehicleId: String) {
+        tag = vehicleId
+        
+        let authString = "\(email):\(vehicleToken)"
+        let authData = authString.data(using: .utf8)
+        let base64String = authData!.base64EncodedString()
+        token = base64String
+    }
+    
 }

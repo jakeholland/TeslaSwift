@@ -25,5 +25,6 @@ Pod::Spec.new do |s|
 	s.requires_arc = true
 
 	s.dependency 'PromiseKit/CorePromise',  '~> 6'
+    s.dependency 'Starscream', '~> 3.0.2'
 
 end
